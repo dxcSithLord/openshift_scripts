@@ -1,0 +1,69 @@
+#!/bin/bash -f
+# Description: This script performs a backup of the etcd on an Openshift cluster
+# The set of nodes is determined and then looped over until the first successful etcd 
+# backup is done.  Since only one backup is required, the name of the node is printed at the end.
+# The code is extended with additional functions as a deomonstration of alternatives to use.
+# Author: A.J.Amabile
+# Date: 26th March 2024
+#
+
+# verify the oc command and path
+oc=$(command -pv oc)
+if (( $? > 0 )); then
+  echo "Unable to find oc command in standard path"
+  exit 1
+fi
+
+# Generate the list of current nodes
+
+set -a nodelist
+if [[ -z ${nodelist[@]} ]]; then
+  nodelist=$( ${oc} get nodes -o jsonpath='{.items[*].metadata.name}' )
+fi
+
+echo "Nodes defined as : ${nodelist[@]}"
+
+TheNode="" # this will hold where the backup was run 
+
+#
+# Define a function to execute a command on a node
+#
+oc_node_root() {
+  local node
+  node=$1
+  shift 1 # whatever the command is gets passed in follows the node ref.
+
+  ${oc} debug --as-root node/$node \
+    -- chroot /host \
+      $@
+  return $?
+}
+
+oc_node_cmd() {
+  local nodeas
+  local node
+  nodeas=""
+  if [[ $1 == "core" ]]; then
+    nodeas="--as-root"
+  fi
+  shift 1
+  node=$1
+  [[ ! -z ${node} ]] && \
+    ${oc} debug ${nodeas} node/$node \
+      -- chroot /home \
+        $@
+  return $?
+}
+
+for node in ${nodelist[@]}; do
+  TheNode=$node
+  oc_node_root $node /usr/local/bin/cluster-backup.sh /home/core/assets/backup
+  (( $? == 0 )) && break  # Only need one good backup
+done
+
+echo "Backup of etcd on $TheNode"
+unset oc_node_cmd
+unset oc_node_root
+unset nodelist
+unset oc
+exit 0
