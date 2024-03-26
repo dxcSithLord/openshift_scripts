@@ -3,13 +3,20 @@
 # Procedure from :
 # https://access.redhat.com/documentation/en-us/openshift_container_platform/4.14/html/\
 #         backup_and_restore/graceful-shutdown-cluster
+# See also https://www.cyberciti.biz/faq/find-check-tls-ssl-certificate-expiry-date-from-linux-unix/
+# for certificate date check.
 # Author : A.J.Amabile
 # Date 26th March 2024
+
+# verify the oc command and get the full path
 oc=$( command -pv oc)
 if (( $? > 0 )); then
   echo "Unable to find oc command in standard path"
   exit 1
 fi
+
+# define the shutdown time
+shutdown_time=2
 
 # 1. take an etcd backup
 Backup_on=$(./backup_etcd)
@@ -19,5 +26,49 @@ certexpire=$( ${oc} -n openshift-kube-apiserver-operator \
                   -o jsonpath='{.metadata.annotations.auth\.openshift\.io/certificate-not-after}' \
             )
 
-# make sure the certexpire is outside the next 24 hours and print the date
+# TODO: make sure the certexpire is outside the next 24 hours and print the date
+echo "The certificate for Openshift expires on $certexpire "
+echo "This will be a problem if the cluster is not running at that time"
 
+# Generate a list of the nodes in the cluster
+set -a nodelist
+nodelist=( $( ${oc} get nodes 
+              -o jsonpath='{.items[*].metadata.name}') 
+         )
+
+# cordon off the nodes to prevent pods being started on them
+for node in ${nodelist[@]}; do 
+  echo ${node} 
+  ${oc} adm cordon ${node} 
+done
+
+# Evacuate all worker nodes
+nodewlist=( $( ${oc} get nodes \
+               -l node-role.kubernetes.io/worker \
+               -o jsonpath='{.items[*].metadata.name}')
+         )
+
+# TODO test for worker and master and core nodes - do we do this if same?
+for node in ${nodewlist[@]}; do 
+  echo ${node} 
+  ${oc} adm drain ${node} \
+    --delete-emptydir-data \
+    --ignore-daemonsets=true \
+    --timeout=15s 
+done
+
+# Shutdown the cluster nodes
+for node in ${nodelist}; do 
+  echo "$node is shutting down"
+  ${oc} debug node/${node}\
+    -- chroot /host \
+      shutdown -h ${shutdown_time}
+done
+
+echo "All nodes have started shutdown"
+echo "Check dependent resources for the cluster, and perform maintenance as required"
+echo "Including, but not limited to:"
+echo "LDAP (AD) services"
+echo "Storage for Persistant storage (NFS)"
+echo "Quay services external to the cluster"
+date
