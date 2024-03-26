@@ -1,0 +1,21 @@
+#!/bin/bash -f
+# Description: This script peforms checks on the nodes at boot-up to verify that the
+# nodes are put back into a scheduled state, once ready
+
+oc=$( command -pv oc)
+${oc} get nodes -l node-role.kubernetes.io/master
+
+echo "need to loop until this shows ready - may take 10 minutes before responding"
+echo "if ready and unschedulable, then make schedulable with"
+
+echo "Check for certificate signing requests"
+csr=$( ${oc} get csr ) # this may be a list
+${oc} describe csr ${csr}
+# check each is valid ( TODO - HOW to check )
+echo "approve each csr"
+${oc} adm certificate approve ${csr}
+
+# Repeat this sequence for worker nodes
+
+echo "Check all nodes are ready"
+${oc} get clusteroperators
