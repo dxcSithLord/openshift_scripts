@@ -1,0 +1,23 @@
+#!/bin/bash
+# Description this script performs a cluster shutdown, confirming first that a backup has been performed.
+# Procedure from :
+# https://access.redhat.com/documentation/en-us/openshift_container_platform/4.14/html/\
+#         backup_and_restore/graceful-shutdown-cluster
+# Author : A.J.Amabile
+# Date 26th March 2024
+oc=$( command -pv oc)
+if (( $? > 0 )); then
+  echo "Unable to find oc command in standard path"
+  exit 1
+fi
+
+# 1. take an etcd backup
+Backup_on=$(./backup_etcd)
+# 2. Get the certificate expiry
+certexpire=$( ${oc} -n openshift-kube-apiserver-operator \
+                get secret kube-apiserver-to-kubelet-signer \
+                  -o jsonpath='{.metadata.annotations.auth\.openshift\.io/certificate-not-after}' \
+            )
+
+# make sure the certexpire is outside the next 24 hours and print the date
+
