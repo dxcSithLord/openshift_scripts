@@ -5,7 +5,7 @@
 # The code is extended with additional functions as a deomonstration of alternatives to use.
 # Author: A.J.Amabile
 # Date: 26th March 2024
-# Modified to move oc command check outside
+# Modified to move oc command check outside and handle if run without cluster permissions
 # Date: 27th March 2024
 
 # verify the oc command and path
@@ -15,7 +15,12 @@
 # Generate the list of current nodes
 set -a nodelist
 if [[ -z ${nodelist[@]} ]]; then
-  nodelist=$( ${oc} get nodes -o jsonpath='{.items[*].metadata.name}' )
+  nodelist=($(${oc} get nodes -o jsonpath='{.items[*].metadata.name}'))
+fi
+
+if (( ${#nodelist[@]} == 0 )); then
+  echo "unable to list nodes, do you have permissions?"
+  exit 1
 fi
 
 echo "Nodes defined as : ${nodelist[@]}"
