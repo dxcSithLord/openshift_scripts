@@ -1,0 +1,16 @@
+#!/bin/bash -f
+# Description : Combine the other commands to perform a custer reboot
+# Author : A.J.Amable
+# Date : 26th March 2024
+
+./Shutdown_cluster
+if (( $? == 0 )); then
+  echo "Cluster shutdown -- waiting 10 minutes before perform checks after reboot"
+  echo "time to refresh your drink..."
+  date
+  sleep 600 
+  ./Startup_cluster
+else
+  echo "Shutdown didn't go as planned, please check"
+  exit 1
+fi
