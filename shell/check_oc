@@ -1,0 +1,6 @@
+# verify the oc command and get the full path
+export oc=$( command -pv oc)
+if (( $? > 0 )); then
+  echo "Unable to find oc command in standard path"
+  exit 1
+fi
