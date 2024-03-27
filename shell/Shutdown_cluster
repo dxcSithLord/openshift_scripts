@@ -7,13 +7,12 @@
 # for certificate date check.
 # Author : A.J.Amabile
 # Date 26th March 2024
+# Modified: outsource oc command check
+# Date 26th March 2024
 
 # verify the oc command and get the full path
-oc=$( command -pv oc)
-if (( $? > 0 )); then
-  echo "Unable to find oc command in standard path"
-  exit 1
-fi
+. ./Check_oc
+(( $? > 0 )) && exit 1
 
 # define the shutdown time
 shutdown_time=2
