@@ -1,10 +1,13 @@
 #!/bin/bash -f
 # Description: This script peforms checks on the nodes at boot-up to verify that the
 # nodes are put back into a scheduled state, once ready
+# Date 27th March
+# Author: A.J.Amabile
 
-oc=$( command -pv oc)
+. ./Check_oc
+(( $? > 0 )) && exit 1
+
 ${oc} get nodes -l node-role.kubernetes.io/master
-
 echo "need to loop until this shows ready - may take 10 minutes before responding"
 echo "if ready and unschedulable, then make schedulable with"
 
