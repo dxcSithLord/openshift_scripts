@@ -1,0 +1,54 @@
+#!/bin/bash -f
+# Description : This script is based on the Red Hat Article:
+# https://access.redhat.com/solutions/3930291
+#    "How to list all OpenShift TLS certificate expire date"
+# The issue handles by the above article are:
+#    How to list all OpenShift TLS certificate expire date?
+#    How to list all nodes' kubelet TLS certificate expire date?
+#    openshift_certificate_expiry playbook nor openssl x509 -in command doesn't show cert information correctly when a cert file has multiple certs in it
+#    Some certs are not checked by openshift_certificate_expiry playbook like certs in kubeconfig and service serving certs
+# Author : A.J.Amabile
+# Date: 27th March 2024
+
+. ./Check_os
+(( $? > 0 )) && exit 1
+
+go_template='{{range .items}}{{if eq .type "kubernetes.io/tls"}}{{.metadata.namespace}}{{" "}}{{.metadata.name}}{{" "}}{{index .data "tls.crt"}}{{"\n"}}{{end}}{{end}}'
+# List all certificate expiry
+echo -e "NAMESPACE\tNAME\tEXPIRY" && \
+  ${oc} get secrets -A \
+    -o go-template=${go_template} \
+    | while read namespace name cert; do
+        echo -en "$namespace\t$name\t"
+        echo $cert | base64 -d | openssl x509 -noout -enddate
+      done | column -t
+if (( $? > 0 )); then
+  echo "Do you have permission to get ALL cluster certificate details?"
+  echo -e "NAMESPACE\tNAME\tEXPIRY" && \
+    ${oc} get secrets \
+      -o go-template=${go_template} \
+      | while read namespace name cert; do
+          echo -en "$namespace\t$name\t"
+          echo $cert | base64 -d | openssl x509 -noout -enddate
+        done | column -t
+  echo "Getting certificates for current workspace" 
+  ${oc} get secrets -A \
+    -o go-template=${go_template} \
+    | while read namespace name cert; do
+        echo " "
+        echo -en "Namespace: $namespace\t\nCertificateName: $name\t\n"
+        echo " "
+        echo $cert | base64 -d
+      done &> Certificates.txt
+  (( $? == 0 )) & echo "See Certificates.txt for X509 Certificates"
+else
+  ${oc} get secrets -A \
+    -o go-template=${go_template} \
+    | while read namespace name cert; do
+        echo " "
+        echo -en "Namespace: $namespace\t\nCertificateName: $name\t\n"
+        echo " "
+        echo $cert | base64 -d
+      done &> Certificates.txt
+  (( $? == 0 )) & echo "See Certificates.txt for all X509 Certificates"
+fi
