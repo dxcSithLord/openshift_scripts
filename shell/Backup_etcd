@@ -5,17 +5,14 @@
 # The code is extended with additional functions as a deomonstration of alternatives to use.
 # Author: A.J.Amabile
 # Date: 26th March 2024
-#
+# Modified to move oc command check outside
+# Date: 27th March 2024
 
 # verify the oc command and path
-oc=$(command -pv oc)
-if (( $? > 0 )); then
-  echo "Unable to find oc command in standard path"
-  exit 1
-fi
+. ./Check_oc
+(( $? > 0 )) && exit 1
 
 # Generate the list of current nodes
-
 set -a nodelist
 if [[ -z ${nodelist[@]} ]]; then
   nodelist=$( ${oc} get nodes -o jsonpath='{.items[*].metadata.name}' )
