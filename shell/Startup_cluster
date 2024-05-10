@@ -10,6 +10,7 @@
 ${oc} get nodes -l node-role.kubernetes.io/master
 echo "need to loop until this shows ready - may take 10 minutes before responding"
 echo "if ready and unschedulable, then make schedulable with"
+echo "${oc} uncordon <nodename>"
 
 echo "Check for certificate signing requests"
 csr=$( ${oc} get csr ) # this may be a list
