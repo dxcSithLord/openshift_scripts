@@ -10,7 +10,7 @@
 # Author : A.J.Amabile
 # Date: 27th March 2024
 
-. ./Check_os
+. ./Check_oc
 (( $? > 0 )) && exit 1
 
 go_template='{{range .items}}{{if eq .type "kubernetes.io/tls"}}{{.metadata.namespace}}{{" "}}{{.metadata.name}}{{" "}}{{index .data "tls.crt"}}{{"\n"}}{{end}}{{end}}'
