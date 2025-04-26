@@ -13,11 +13,13 @@ echo "if ready and unschedulable, then make schedulable with"
 echo "${oc} uncordon <nodename>"
 
 echo "Check for certificate signing requests"
-csr=$( ${oc} get csr ) # this may be a list
+csr=($( ${oc} get csr ) ) # this may be a list
 ${oc} describe csr ${csr}
 # check each is valid ( TODO - HOW to check )
 echo "approve each csr"
-${oc} adm certificate approve ${csr}
+for ecsr in ${csr[@]}; do
+  ${oc} adm certificate approve ${ecsr}
+done
 
 # Repeat this sequence for worker nodes
 
